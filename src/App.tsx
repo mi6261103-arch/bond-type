@@ -5,6 +5,8 @@ import { calculateResult, type AnswerSelection } from "./scoring";
 
 type Screen = "home" | "quiz" | "result" | "about" | "privacy";
 
+const siteUrl = "https://bond-type.netlify.app/";
+
 function App() {
   const [screen, setScreen] = useState<Screen>("home");
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -56,27 +58,56 @@ function App() {
     setScreen("home");
   }
 
+  async function copyText(text: string) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.opacity = "0";
+    document.body.appendChild(field);
+    field.select();
+    const copied = document.execCommand("copy");
+    field.remove();
+    if (!copied) throw new Error("링크를 복사하지 못했어요.");
+  }
+
   async function shareResult() {
     const fileName = `bond-type-${result.id}.png`;
 
     setIsSharing(true);
     setNotice("");
+    let copyError = "";
     try {
-      const blob = await createResultPng(resultId);
+      try {
+        await copyText(siteUrl);
+      } catch (error) {
+        copyError = error instanceof Error ? error.message : "링크를 복사하지 못했어요.";
+      }
+
+      const blob = await createResultPng(resultId, siteUrl);
       const file = new File([blob], fileName, { type: "image/png" });
+      const linkInstruction = copyError
+        ? `링크 자동 복사에 실패했어요 (${copyError}). Instagram 스토리에서 링크 스티커에 ${siteUrl}을 입력해 주세요.`
+        : "Instagram 스토리에서 링크 스티커를 추가하고, 붙여넣기로 복사된 사이트 주소를 넣어 주세요.";
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] });
-        setNotice("결과 이미지 공유를 완료했어요.");
+        setNotice(linkInstruction);
         return;
       }
 
       downloadBlob(blob, fileName);
-      setNotice(
-        "결과 이미지를 저장했어요. Instagram 스토리에서 갤러리의 이미지를 선택해 주세요.",
-      );
+      setNotice(`결과 이미지를 저장했어요. ${linkInstruction}`);
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setNotice("이미지 공유를 취소했어요. 사이트 주소는 클립보드에 복사되어 있어요.");
+        return;
+      }
       setNotice(
         error instanceof Error
           ? error.message
@@ -273,8 +304,10 @@ function App() {
             <p>
               결과 이미지 저장과 생성은 이 브라우저에서 처리돼요. 이미지 공유를
               지원하는 기기에서는 이미지 파일만 기기의 공유 메뉴로 전달해 앱을 선택할
-              수 있어요. 지원하지 않는 기기에서는 이미지를 저장해 Instagram 스토리에서
-              직접 선택하면 됩니다. 공유와 게시 여부는 사용자가 직접 선택해요.
+              수 있고, 스토리에서 링크 스티커를 추가해 복사된 사이트 주소를 붙여넣으면
+              다른 사람이 테스트로 이동할 수 있어요. 이미지 공유를 지원하지 않는
+              기기에서는 저장된 이미지를 Instagram 스토리에서 직접 선택하면 됩니다.
+              공유와 게시 여부는 사용자가 직접 선택해요.
             </p>
             <h2>광고</h2>
             <p>
@@ -397,7 +430,7 @@ function downloadBlob(blob: Blob, fileName: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-async function createResultPng(resultId: ResultId) {
+async function createResultPng(resultId: ResultId, url = siteUrl) {
   const result = getResultProfile(resultId);
   const width = 1080;
   const height = 1350;
@@ -447,6 +480,7 @@ async function createResultPng(resultId: ResultId) {
   parts.push(`<line x1="92" y1="1220" x2="988" y2="1220" stroke="#d9d5ce" stroke-width="2"/>`);
   parts.push(svgText("A SMALL TEST, A LITTLE MORE UNDERSTANDING", 92, 1268, 15, muted, 500));
   parts.push(svgText("BOND TYPE", 850, 1268, 18, charcoal, 700));
+  parts.push(svgText(`나도 해보기  ·  ${url.replace(/^https?:\/\//, "").replace(/\/$/, "")}`, 92, 1300, 17, accent, 600));
   parts.push("</svg>");
 
   const svgBlob = new Blob([parts.join("")], { type: "image/svg+xml;charset=utf-8" });
