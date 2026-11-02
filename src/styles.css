@@ -559,19 +559,24 @@ p {
 }
 
 .result-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  max-width: 470px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   justify-content: center;
   gap: 10px;
-  margin-top: 24px;
+  margin: 24px auto 0;
 }
 
 .result-actions .primary-button,
 .result-actions .secondary-button {
+  width: 100%;
   min-height: 48px;
+  padding-inline: 16px;
 }
 
 .retry-button {
+  grid-column: 1 / -1;
+  justify-self: center;
   padding-inline: 16px;
 }
 
@@ -714,19 +719,6 @@ p {
     letter-spacing: 0.09em;
   }
 
-  .result-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .result-actions .primary-button {
-    grid-column: 1 / -1;
-  }
-
-  .retry-button {
-    grid-column: 1 / -1;
-  }
-
   .info-page {
     width: calc(100% - 40px);
     min-height: 620px;
@@ -763,6 +755,12 @@ p {
   }
 
   .answer-option > span:nth-child(2) {
+    font-size: 13px;
+  }
+
+  .result-actions .primary-button,
+  .result-actions .secondary-button {
+    padding-inline: 10px;
     font-size: 13px;
   }
 

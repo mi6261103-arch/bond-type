@@ -13,6 +13,7 @@ function App() {
   );
   const [notice, setNotice] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const questionHeading = useRef<HTMLHeadingElement>(null);
   const resultId = calculateResult(selections);
   const result = getResultProfile(resultId);
@@ -76,18 +77,36 @@ function App() {
   async function shareResult() {
     const text = `나의 친구 관계 스타일은 '${result.name}'! ${result.intro}`;
     const url = window.location.origin;
+    const fileName = `bond-type-${result.id}.png`;
 
+    setIsSharing(true);
+    setNotice("");
     try {
-      if (navigator.share) {
+      const blob = await createResultPng(resultId);
+      const file = new File([blob], fileName, { type: "image/png" });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           title: `BOND TYPE — ${result.name}`,
           text,
-          url,
+          files: [file],
         });
-        setNotice("결과를 공유했어요.");
-      } else {
+        setNotice("공유 메뉴에서 Instagram을 선택해 스토리에 올려 주세요.");
+        return;
+      }
+
+      downloadBlob(blob, fileName);
+      try {
         await copyText(`${text}\n${url}`);
-        setNotice("결과와 링크를 복사했어요.");
+        setNotice(
+          "이미지를 저장하고 결과 링크를 복사했어요. Instagram 스토리에서 저장한 이미지를 선택해 주세요.",
+        );
+      } catch (error) {
+        setNotice(
+          `이미지를 저장했어요. Instagram 스토리에서 저장한 이미지를 선택해 주세요. ${
+            error instanceof Error ? error.message : "링크 복사는 완료하지 못했어요."
+          }`,
+        );
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
@@ -96,6 +115,8 @@ function App() {
           ? error.message
           : "공유하지 못했어요. 다시 시도해 주세요.",
       );
+    } finally {
+      setIsSharing(false);
     }
   }
 
@@ -104,14 +125,7 @@ function App() {
     setNotice("");
     try {
       const blob = await createResultPng(resultId);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `bond-type-${result.id}.png`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `bond-type-${result.id}.png`);
       setNotice("결과 카드를 PNG로 저장했어요.");
     } catch (error) {
       setNotice(
@@ -228,17 +242,27 @@ function App() {
             </div>
             <ResultCard resultId={resultId} />
             <div className="result-actions">
-              <button className="primary-button" onClick={downloadResult} disabled={isSaving}>
+              <button
+                className="primary-button"
+                onClick={downloadResult}
+                disabled={isSaving || isSharing}
+              >
                 {isSaving ? "이미지 만드는 중..." : "결과 이미지 저장"}
               </button>
-              <button className="secondary-button" onClick={shareResult}>
-                결과 공유하기
+              <button
+                className="secondary-button"
+                onClick={shareResult}
+                disabled={isSaving || isSharing}
+              >
+                {isSharing ? "공유 준비 중..." : "결과 공유하기"}
               </button>
               <button className="text-button retry-button" onClick={startTest}>
                 다시 테스트하기
               </button>
             </div>
-            <p className="share-notice" role="status" aria-live="polite">{notice}</p>
+            <p className="share-notice" role="status" aria-live="polite">
+              {notice}
+            </p>
             <div className="ad-placeholder" aria-label="광고 영역">
               <span>AD</span>
               <p>광고 영역 · 추후 광고 설정 시 표시됩니다</p>
@@ -280,9 +304,10 @@ function App() {
             </p>
             <h2>공유와 이미지 저장</h2>
             <p>
-              결과 이미지 저장은 이 브라우저에서 처리돼요. 공유 기능을 선택하면 기기의
-              공유 기능 또는 복사 기능을 사용합니다. 공유할 정보는 사용자가 직접
-              선택할 수 있어요.
+              결과 이미지 저장과 생성은 이 브라우저에서 처리돼요. 이미지 공유를
+              지원하는 기기에서는 기기의 공유 메뉴를 열어 앱을 선택할 수 있고, 지원하지
+              않는 기기에서는 이미지를 저장하고 결과 링크를 복사합니다. 공유와 게시 여부는
+              사용자가 직접 선택해요.
             </p>
             <h2>광고</h2>
             <p>
@@ -392,6 +417,17 @@ function svgText(
   weight = 400,
 ) {
   return `<text x="${x}" y="${y}" fill="${color}" font-family="Arial, sans-serif" font-size="${size}" font-weight="${weight}">${xmlEscape(text)}</text>`;
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 async function createResultPng(resultId: ResultId) {
