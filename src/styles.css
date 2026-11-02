@@ -569,9 +569,19 @@ p {
 
 .result-actions .primary-button,
 .result-actions .secondary-button {
+  display: inline-flex;
   width: 100%;
-  min-height: 48px;
-  padding-inline: 16px;
+  min-width: 0;
+  height: 52px;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 8px;
+  box-sizing: border-box;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .retry-button {
@@ -760,7 +770,7 @@ p {
 
   .result-actions .primary-button,
   .result-actions .secondary-button {
-    padding-inline: 10px;
+    padding-inline: 4px;
     font-size: 13px;
   }
 

@@ -56,27 +56,7 @@ function App() {
     setScreen("home");
   }
 
-  async function copyText(text: string) {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return;
-    }
-
-    const field = document.createElement("textarea");
-    field.value = text;
-    field.setAttribute("readonly", "");
-    field.style.position = "fixed";
-    field.style.opacity = "0";
-    document.body.appendChild(field);
-    field.select();
-    const copied = document.execCommand("copy");
-    field.remove();
-    if (!copied) throw new Error("복사를 완료하지 못했어요.");
-  }
-
   async function shareResult() {
-    const text = `나의 친구 관계 스타일은 '${result.name}'! ${result.intro}`;
-    const url = window.location.origin;
     const fileName = `bond-type-${result.id}.png`;
 
     setIsSharing(true);
@@ -86,28 +66,15 @@ function App() {
       const file = new File([blob], fileName, { type: "image/png" });
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          title: `BOND TYPE — ${result.name}`,
-          text,
-          files: [file],
-        });
-        setNotice("공유 메뉴에서 Instagram을 선택해 스토리에 올려 주세요.");
+        await navigator.share({ files: [file] });
+        setNotice("결과 이미지 공유를 완료했어요.");
         return;
       }
 
       downloadBlob(blob, fileName);
-      try {
-        await copyText(`${text}\n${url}`);
-        setNotice(
-          "이미지를 저장하고 결과 링크를 복사했어요. Instagram 스토리에서 저장한 이미지를 선택해 주세요.",
-        );
-      } catch (error) {
-        setNotice(
-          `이미지를 저장했어요. Instagram 스토리에서 저장한 이미지를 선택해 주세요. ${
-            error instanceof Error ? error.message : "링크 복사는 완료하지 못했어요."
-          }`,
-        );
-      }
+      setNotice(
+        "결과 이미지를 저장했어요. Instagram 스토리에서 갤러리의 이미지를 선택해 주세요.",
+      );
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setNotice(
@@ -305,9 +272,9 @@ function App() {
             <h2>공유와 이미지 저장</h2>
             <p>
               결과 이미지 저장과 생성은 이 브라우저에서 처리돼요. 이미지 공유를
-              지원하는 기기에서는 기기의 공유 메뉴를 열어 앱을 선택할 수 있고, 지원하지
-              않는 기기에서는 이미지를 저장하고 결과 링크를 복사합니다. 공유와 게시 여부는
-              사용자가 직접 선택해요.
+              지원하는 기기에서는 이미지 파일만 기기의 공유 메뉴로 전달해 앱을 선택할
+              수 있어요. 지원하지 않는 기기에서는 이미지를 저장해 Instagram 스토리에서
+              직접 선택하면 됩니다. 공유와 게시 여부는 사용자가 직접 선택해요.
             </p>
             <h2>광고</h2>
             <p>
